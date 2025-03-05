@@ -1,2 +1,1 @@
-# Tests
-## With default VS-code and terminal
+## Андрусяк Ілля, група ІПЗ-31
