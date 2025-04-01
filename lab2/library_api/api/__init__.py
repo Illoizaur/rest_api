@@ -1,0 +1,2 @@
+# lab2/library_api/api/__init__.py
+# This file makes the api directory a Python package
