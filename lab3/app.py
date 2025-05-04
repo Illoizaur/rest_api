@@ -1,5 +1,3 @@
-# lab3/app.py
-
 from library_api import create_app
 
 app = create_app()

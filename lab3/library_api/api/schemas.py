@@ -1,5 +1,3 @@
-# library_api/api/schemas.py
-
 from marshmallow import Schema, fields, validate, ValidationError, post_dump
 from datetime import datetime
 from flask import request
@@ -12,9 +10,9 @@ class BookSchema(Schema):
     published_year = fields.Integer(validate=validate.Range(min=1000, max=datetime.now().year))
     genre = fields.String(validate=validate.Length(min=1, max=50))
     description = fields.String(validate=validate.Length(max=1000))
-   
+
     _links = fields.Dict(dump_only=True)
-    
+
     @post_dump
     def add_links(self, data, **kwargs):
         book_id = data.get('id')

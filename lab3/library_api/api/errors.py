@@ -1,7 +1,4 @@
-# library_api/api/errors.py
-
 from flask import jsonify
-from marshmallow import ValidationError
 
 def books_not_found():
 	return jsonify({"error": "Not books found"})
