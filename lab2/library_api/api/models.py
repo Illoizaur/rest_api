@@ -1,7 +1,6 @@
 from typing import List, Optional
 from .schemas import Book, BookCreate, BookUpdate
 
-
 class BookRepository:
     def __init__(self):
         self.books = [
@@ -24,6 +23,13 @@ class BookRepository:
                 description="Ukrainian national epic"
             )
         ]
+        self.update_next_id()
+
+    def update_next_id(self):
+        if self.books:
+            self.next_id = max(book.id for book in self.books) + 1
+        else:
+            self.next_id = 1
 
     async def get_all_books(self) -> List[Book]:
         return self.books
@@ -36,14 +42,16 @@ class BookRepository:
 
     async def create_book(self, book: BookCreate) -> Book:
         new_book = Book(
-            id=len(self.books) + 1,
+            id=self.next_id,
             **book.model_dump()
         )
         self.books.append(new_book)
+        self.update_next_id()
         return new_book
 
     async def delete_book(self, book_id: int) -> None:
         self.books = [book for book in self.books if book.id != book_id]
+        self.update_next_id()
 
     async def update_book(self, book_id: int, book: BookUpdate) -> Optional[Book]:
         for i, existing_book in enumerate(self.books):
@@ -51,4 +59,4 @@ class BookRepository:
                 updated_book = existing_book.model_copy(update=book.model_dump(exclude_unset=True))
                 self.books[i] = updated_book
                 return updated_book
-        return None 
+        return None

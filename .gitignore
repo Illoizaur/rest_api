@@ -38,3 +38,7 @@ htmlcov/
 
 # Logs
 *.log 
+
+# Geany and git
+.gitignore
+*.geany
