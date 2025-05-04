@@ -1,5 +1,3 @@
-# library_api/api/views.py
-
 from flask import Blueprint, request, jsonify, Response, url_for
 from marshmallow import ValidationError
 from typing import Tuple
@@ -17,13 +15,13 @@ books_schema = BookSchema(many=True)
 def get_books() -> Tuple[Response, int]:
     limit = request.args.get("limit", default = 10, type = int)
     offset = request.args.get("offset", default = 0, type = int)
-    
+
     if not books:
         return books_not_found
-    
+
     books = Book.query.limit(limit).offset(offset).all()
     result = books_schema.dump(books)
-    
+
     base_url = request.url_root.rstrip('/') + '/api'
     response = {
         "books": result,
@@ -33,33 +31,50 @@ def get_books() -> Tuple[Response, int]:
         },
         "total": Book.query.count()
     }
-    
+
     return jsonify(response), 200
 
 @api.route('/books/<int:book_id>', methods=['GET'])
-def get_book(book_id: str) -> Tuple[Response, int]:
+def get_book(book_id: int) -> Tuple[Response, int]:
     book = Book.query.get(book_id)
     if book is None:
         return book_not_found
-    
+
     result = book_schema.dump(book)
-    return jsonify(result), 200
+    total_books = Book.query.count()
+
+    base_url = request.url_root.rstrip('/') + '/api/books'
+    response = {
+        "book": result,
+        "_links": {
+            "self": f"{base_url}/{book_id}",
+            "collection": f"{base_url}",
+        }
+    }
+
+    if book_id > 1:
+        response["_links"]["previous"] = f"{base_url}/{book_id - 1}"
+
+    if book_id < total_books:
+        response["_links"]["next"] = f"{base_url}/{book_id + 1}"
+
+    return jsonify(response), 200
 
 @api.route('/books', methods=['POST'])
 def add_book() -> Tuple[Response, int]:
     json_data = request.get_json()
     if not json_data:
         return invalid_data
- 
+
     try:
         book_data = book_schema.load(json_data)
     except ValidationError as err:
         return validation_error
-    
+
     new_book = Book(**book_data)
     db.session.add(new_book)
     db.session.commit()
-    
+
     result = book_schema.dump(new_book)
     base_url = request.url_root.rstrip('/') + '/api'
     response = {
@@ -70,18 +85,18 @@ def add_book() -> Tuple[Response, int]:
             "collection": f"{base_url}/books"
         }
     }
-    
+
     return jsonify(response), 201
 
 @api.route('/books/<book_id>', methods=['DELETE'])
 def delete_book(book_id: str) -> Tuple[Response, int]:
-    book = Book.query.get(book_id)	
+    book = Book.query.get(book_id)
     if not book:
         return book_not_found
 
     db.session.delete(book)
     db.session.commit()
-    
+
     response = {
         "message": "Book deleted successfully",
         "_links": {
