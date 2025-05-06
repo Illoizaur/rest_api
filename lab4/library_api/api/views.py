@@ -13,22 +13,46 @@ books_schema = BookSchema(many=True)
 
 @api.route('/books', methods=['GET'])
 def get_books() -> Tuple[Response, int]:
-    limit = request.args.get("limit", default = 10, type = int)
-    offset = request.args.get("offset", default = 0, type = int)
+    limit = request.args.get("limit", default=10, type=int)
+    cursor_after = request.args.get("cursor", type=int)
+    cursor_before = request.args.get("before", type=int)
+
+    base_url = request.url_root.rstrip('/') + '/api'
+
+    # Сортуємо і фільтруємо залежно від напрямку пагінації
+    if cursor_after:
+        query = Book.query.filter(Book.id > cursor_after).order_by(Book.id.asc())
+    elif cursor_before:
+        query = Book.query.filter(Book.id < cursor_before).order_by(Book.id.desc())
+    else:
+        query = Book.query.order_by(Book.id.asc())
+
+    books = query.limit(limit).all()
 
     if not books:
         return books_not_found()
 
-    books = Book.query.limit(limit).offset(offset).all()
+    if cursor_before:
+        books.reverse()
+
     result = books_schema.dump(books)
 
-    base_url = request.url_root.rstrip('/') + '/api'
+    next_cursor = books[-1].id if len(books) == limit else None
+    prev_cursor = books[0].id if cursor_after or cursor_before else None
+
+    links = {
+        "self": request.url,
+        "add": f"{base_url}/books"
+    }
+
+    if next_cursor:
+        links["next"] = f"{base_url}/books?limit={limit}&cursor={next_cursor}"
+    if prev_cursor and (cursor_after or cursor_before):
+        links["prev"] = f"{base_url}/books?limit={limit}&before={prev_cursor}"
+
     response = {
         "books": result,
-        "_links": {
-            "self": f"{base_url}/books",
-            "add": f"{base_url}/books"
-        },
+        "_links": links,
         "total": Book.query.count()
     }
 
