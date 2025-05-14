@@ -13,26 +13,38 @@ books_schema = BookSchema(many=True)
 
 @api.route('/books', methods=['GET'])
 def get_books() -> Tuple[Response, int]:
-    limit = request.args.get("limit", default = 10, type = int)
-    offset = request.args.get("offset", default = 0, type = int)
+    limit = request.args.get("limit", default=10, type=int)
+    offset = request.args.get("offset", default=0, type=int)
+    total = Book.query.count()
+    books = Book.query.limit(limit).offset(offset).all()
 
     if not books:
         return books_not_found()
 
-    books = Book.query.limit(limit).offset(offset).all()
     result = books_schema.dump(books)
+    base_url = request.url_root.rstrip('/') + '/api/books'
 
-    base_url = request.url_root.rstrip('/') + '/api'
+    links = {
+        "self": f"{base_url}?limit={limit}&offset={offset}",
+        "add": f"{base_url}"
+    }
+
+    if offset > 0:
+        prev_offset = max(offset - limit, 0)
+        links["prev"] = f"{base_url}?limit={limit}&offset={prev_offset}"
+
+    if offset + limit < total:
+        next_offset = offset + limit
+        links["next"] = f"{base_url}?limit={limit}&offset={next_offset}"
+
     response = {
         "books": result,
-        "_links": {
-            "self": f"{base_url}/books",
-            "add": f"{base_url}/books"
-        },
-        "total": Book.query.count()
+        "_links": links,
+        "total": total
     }
 
     return jsonify(response), 200
+
 
 @api.route('/books/<int:book_id>', methods=['GET'])
 def get_book(book_id: int) -> Tuple[Response, int]:
