@@ -14,11 +14,11 @@ async def create_book(book_data: BookCreate) -> BookInDB:
     collection = await get_book_collection()
     book_dict = book_data.model_dump()
     result = await collection.insert_one(book_dict)
-    created_book_doc = await collection.find_one({"_id": result.inserted_id})
-    if created_book_doc:
-        created_book_doc["_id"] = str(created_book_doc["_id"])
-        return BookInDB(**created_book_doc)
-    raise Exception("Помилка при створенні книги: не вдалося отримати створений запис.")
+    created_book_doc = BookInDB(
+        id=str(result.inserted_id),
+        **book_data.dict()
+    )
+    return created_book_doc
 
 
 async def get_all_books(skip: int = 0, limit: int = 100) -> List[BookInDB]:
@@ -54,11 +54,9 @@ async def update_book(book_id: str, book_data: BookUpdate) -> Optional[BookInDB]
         {"$set": update_data_dict}
     )
     if result.modified_count == 1:
-        updated_book_doc = await collection.find_one({"_id": object_id})
-        if updated_book_doc:
-            updated_book_doc["_id"] = str(updated_book_doc["_id"])
-            return BookInDB(**updated_book_doc)
-    return await get_book_by_id(book_id)
+        updated_book_doc = await get_book_by_id(book_id)
+        return updated_book_doc
+    return None
 
 
 async def delete_book(book_id: str) -> bool:
